@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MemoryChain - Preserve Your Memories</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #2c3e50;
+        }
+        .memory-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .memory-card {
+            background-color: #e6f2ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #3498db;
+            border-radius: 5px;
+        }
+        .emotional-meter {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="memory-container">
+        <h2>Create Memory Token</h2>
+        <input type="text" id="memoryTitle" placeholder="Memory Title">
+        <textarea id="memoryDescription" placeholder="Describe your memory"></textarea>
+        
+        <div class="emotional-meter">
+            <span>Emotional Intensity:</span>
+            <input type="range" id="emotionalIntensity" min="1" max="10" value="5">
+        </div>
+        
+        <input type="text" id="memoryTags" placeholder="Tags (comma separated)">
+        <button onclick="createMemory()">Tokenize Memory</button>
+    </div>
+
+    <div class="memory-container">
+        <h2>Collaborate on Memory</h2>
+        <input type="number" id="collaborationMemoryId" placeholder="Memory ID">
+        <textarea id="collaborationContribution" placeholder="Your contribution to the memory"></textarea>
+        <button onclick="collaborateOnMemory()">Add Collaboration</button>
+    </div>
+
+    <div class="memory-container">
+        <h2>Verify Memory Collaboration</h2>
+        <input type="number" id="verifyMemoryId" placeholder="Memory ID">
+        <input type="text" id="verifyCollaboratorId" placeholder="Collaborator Principal">
+        <button onclick="verifyCollaboration()">Verify Collaboration</button>
+    </div>
+
+    <div class="memory-container">
+        <h2>Memory Details</h2>
+        <input type="number" id="memoryDetailsId" placeholder="Memory ID">
+        <button onclick="getMemoryDetails()">Get Details</button>
+        <div id="memoryDetailsDisplay"></div>
+    </div>
+
+    <script type="module">
+        import { backend } from 'declarations/backend';
+
+        // Fungsi membuat kenangan
+        window.createMemory = async () => {
+            const title = document.getElementById('memoryTitle').value;
+            const description = document.getElementById('memoryDescription').value;
+            const emotionalIntensity = parseInt(document.getElementById('emotionalIntensity').value);
+            const tags = document.getElementById('memoryTags').value.split(',').map(tag => tag.trim());
+
+            try {
+                const result = await backend.createMemory(title, description, emotionalIntensity, tags);
+                if (result.ok) {
+                    alert(`Memory tokenized with ID: ${result.ok}`);
+                } else {
+                    alert(`Error: ${result.err}`);
+                }
+            } catch (error) {
+                console.error('Memory creation failed:', error);
+            }
+        };
+
+        // Fungsi kolaborasi kenangan
+        window.collaborateOnMemory = async () => {
+            const memoryId = parseInt(document.getElementById('collaborationMemoryId').value);
+            const contribution = document.getElementById('collaborationContribution').value;
+
+            try {
+                const result = await backend.collaborateOnMemory(memoryId, contribution);
+                if (result.ok) {
+                    alert('Collaboration added successfully');
+                } else {
+                    alert(`Error: ${result.err}`);
+                }
+            } catch (error) {
+                console.error('Collaboration failed:', error);
+            }
+        };
+
+        // Fungsi verifikasi kolaborasi
+        window.verifyCollaboration = async () => {
+            const memoryId = parseInt(document.getElementById('verifyMemoryId').value);
+            const collaboratorId = document.getElementById('verifyCollaboratorId').value;
+
+            try {
+                const result = await backend.verifyCollaboration(memoryId, collaboratorId);
+                if (result.ok) {
+                    alert('Collaboration verified successfully');
+                } else {
+                    alert(`Error: ${result.err}`);
+                }
+            } catch (error) {
+                console.error('Verification failed:', error);
+            }
+        };
+
+        // Fungsi mendapatkan detail kenangan
+        window.getMemoryDetails = async () => {
+            const memoryId = parseInt(document.getElementById('memoryDetailsId').value);
+            const displayArea = document.getElementById('memoryDetailsDisplay');
+
+            try {
+                const memory = await backend.getMemoryDetails(memoryId);
+                if (memory) {
+                    // Dapatkan kolaborasi
+                    const collaborations = await backend.getMemoryCollaborations(memoryId);
+
+                    displayArea.innerHTML = `
+                        <div class="memory-card">
+                            <h3>${memory.title}</h3>
+                            <p>${memory.description}</p>
+                            <div>
+                                <strong>Emotional Intensity:</strong> 
+                                ${'❤️'.repeat(memory.emotionalIntensity)}
+                            </div>
+                            <div>
+                                <strong>Tags:</strong> ${memory.tags.join(', ')}
+                            </div>
+                            <div>
+                                <strong>Memory Tokens:</strong> ${memory.memoryTokens}
+                            </div>
+                            <div>
+                                <strong>Verification Status:</strong> ${memory.verificationStatus}
+                            </div>
+                            <h4>Collaborations:</h4>
+                            ${collaborations.map(collab => `
+                                <div>
+                                    Collaborator: ${collab.collaborator}
+                                    Contribution: ${collab.contribution}
+                                    Verified: ${collab.verified}
+                                </div>
+                            `).join('') || 'No collaborations yet'}
+                        </div>
+                    `;
+                } else {
+                    displayArea.innerHTML = 'Memory not found';
+                }
+            } catch (error) {
+                console.error('Memory details retrieval failed:', error);
+                displayArea.innerHTML = 'Error retrieving memory details';
+            }
+        };
+    </script>
+</body>
+</html>
